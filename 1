@@ -1,0 +1,24 @@
+DragSphereHandler::DragSphereHandler(SmartMesh mesh,IViewer* render):render_(render)
+{
+	mesh_ = mesh;	
+	node_.reset(new Node);//node_管理一个新节点
+	node_->SetName("DragSphereHandlerNode");
+}
+
+DragSphereHandler::~DragSphereHandler(void)
+{
+}
+/*virtual*/ void DragSphereHandler::end(IViewer *viewer)
+{
+	if(viewer)
+	{
+		if(node_)
+		{
+			node_->clearAll();
+			render_->getDocument()->rootNode()->removeChild(node_);
+		}
+		sphere_.reset();
+		pickDrawable_.reset();
+		setValid(false);	
+	}	
+}
