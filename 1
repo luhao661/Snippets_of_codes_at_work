@@ -26,3 +26,26 @@ DragSphereHandler::~DragSphereHandler(void)
  
 
 
+shared_ptr<LineGeometry> DragSphereHandler::createLineBetweenSpheres(SmartMesh sphere1, SmartMesh sphere2)
+{
+	// 获取两个小球的中心点
+	Vec3 center1 = sphere1->getMeshCenter();
+	Vec3 center2 = sphere2->getMeshCenter();
+
+	// 创建一个LineGeometry对象，用于绘制线段
+	shared_ptr<LineGeometry> line(new LineGeometry(center1, center2, Color4f(0.0f, 0.0f, 1.0f, 1.0f), 1.0f));
+	line->SetName("SphereConnectionLine");
+
+	// 将线段添加到渲染节点
+	node_->addDrawable(line,true);
+
+	// 将渲染节点添加到主渲染节点
+	static bool runonlyonce = true;
+	if(runonlyonce)
+	{
+		render_->addChild(node_);//只要添加一次
+		runonlyonce = false;
+	}
+
+	return line;
+}
