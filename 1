@@ -1,12 +1,23 @@
-1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
+
+#pragma once
+//#include <UPMesh/MeshIO.h>
+//#include <UPMesh/Node.h>
+//#include <Qstring>
+#include <vector>
+#include <QWidget>
+//以下include转到.cpp
+#include <QVBoxLayout>
+#include <QGridLayout>
+#include <QSlider>
+#include <QDockWidget>
+#include <QMainWindow>
+#include <QDebug>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QPushButton>
+#include <QEvent>
+class NavBarWidget : public QWidget
+{
+public:
+    NavBarWidget(QWidget* parent = nullptr) : QWidget(parent)
+    {
