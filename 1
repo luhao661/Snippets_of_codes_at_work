@@ -1,23 +1,45 @@
-
-#pragma once
-//#include <UPMesh/MeshIO.h>
-//#include <UPMesh/Node.h>
-//#include <Qstring>
-#include <vector>
-#include <QWidget>
-//以下include转到.cpp
-#include <QVBoxLayout>
-#include <QGridLayout>
-#include <QSlider>
-#include <QDockWidget>
-#include <QMainWindow>
-#include <QDebug>
-#include <QHBoxLayout>
-#include <QLabel>
-#include <QPushButton>
-#include <QEvent>
-class NavBarWidget : public QWidget
-{
-public:
-    NavBarWidget(QWidget* parent = nullptr) : QWidget(parent)
+  bool showNavWidget(QMainWindow* mainWindow)
     {
+        if (!mainWindow)
+            return false;
+        // 保存 mainWindow 的指针
+        this->mainWindow_ = mainWindow;
+        // 安装事件过滤器
+        mainWindow_->installEventFilter(this);//使得 NavBarWidget 能捕获 QMainWindow 的事件。
+        // 创建 QDockWidget 并设置空内容
+        dock = new QDockWidget("", mainWindow);
+        dock->setWidget(this);  // 将 NavBarWidget 本身设置为 QDockWidget 的内容
+
+        // 隐藏标题栏
+        QWidget* emptyTitleBar = new QWidget(dock);
+        dock->setTitleBarWidget(emptyTitleBar);
+        // 设置 dock widget 为浮动状态
+        //dock->setFloating(true);
+
+        // 固定 dock widget，禁用关闭和拖动
+        //dock->setFeatures(QDockWidget::NoDockWidgetFeatures);
+        //dock->move(200, 150); // 根据主窗口的尺寸和需求调整
+        //这句一定要写
+        // 将 QDockWidget 添加到 QMainWindow 的左侧停靠区域
+        mainWindow->addDockWidget(Qt::LeftDockWidgetArea, dock);
+        //计算自适应高度
+        adaptive_height_ = (groupSliders.size() + child_sliders.size()) * 30;
+
+        //***注***
+        //先添加到MainWinow再进行位置等设置
+        // 设置 dock widget 为浮动状态
+        dock->setFloating(true);
+        dock->resize(200, adaptive_height_);
+        dock->move(270, 150); // 根据主窗口的尺寸和需求调整
+        
+        // 强制显示 QDockWidget
+        dock->show();
+        //// 打印调试信息
+        //qDebug() << "QDockWidget added to main window:";
+        //qDebug() << "Dock widget is visible:" << dock->isVisible();
+        //将 widget 嵌入到 QMainWindow 中，而不是作为一个独立的窗口显示
+        //用这个方法的话IViewer中的三维图无法显示，且退出时有内存释放上的错误
+        //mainWindow->setCentralWidget(this);
+        //this->show();
+        return true;
+    }
