@@ -1,0 +1,64 @@
+    //点击滑动条内部空间的位置，没反应
+    //void mousePressEvent(QMouseEvent* event) override
+    //每个子滑动条有事件过滤器，子滑动条上有点击事件时会进入此函数
+    bool eventFilter(QObject* obj, QEvent* event) override
+    {
+        if (event->type() == QEvent::MouseButtonPress)
+        {
+            QMouseEvent* mouseEvent = static_cast<QMouseEvent*>(event);
+            QSlider* slider = qobject_cast<QSlider*>(obj);
+            if (slider)
+            {
+                QPoint pos = mouseEvent->pos();
+                int sliderMin = slider->minimum();
+                int sliderMax = slider->maximum();
+                int newValue = sliderMin + ((pos.x() * (sliderMax - sliderMin)) / slider->width());
+                //点击0可以到0，点击100%位置，滑块不能立即到100位置
+                //if (newValue == 0 || newValue == 100)
+                //{
+                //    slider->setValue(newValue);
+                //}
+                if (sliderstate_ == dual_state)
+                {
+                    // 如果计算的新值接近最小值或最大值处，则直接设置为最小值或者最大值
+                    if (newValue >= sliderMax - 2 || newValue <= sliderMin + 2)
+                    {
+                        if (newValue >= sliderMax - 2)
+                        {
+                            newValue = sliderMax;
+                        }
+                        if (newValue <= sliderMin + 2)
+                        {
+                            newValue = sliderMin;
+                        }
+                        slider->setValue(newValue);
+                    }
+                }
+                else if (sliderstate_ == tri_state)
+                {
+                    // 如果计算的新值接近最小值或最大值处，则直接设置为最小值或者最大值
+                    if (newValue >= sliderMax - 2 || newValue <= sliderMin + 2||
+                        (newValue>=49&& newValue<=51))
+                    {
+                        if (newValue >= sliderMax - 2)
+                        {
+                            newValue = sliderMax;
+                        }
+                        if (newValue <= sliderMin + 2)
+                        {
+                            newValue = sliderMin;
+                        }
+                        int mid = sliderMax / 2;
+                        if ((newValue >= mid-1 && newValue <= mid+1))
+                        {
+                            newValue = mid;
+                        }
+                        slider->setValue(newValue);
+                    }
+                }
+                // 不返回 true，继续处理事件，确保滑块拖动功能
+                //return true;
+            }
+        }
+        return QWidget::eventFilter(obj, event);
+    }
