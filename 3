@@ -1,0 +1,89 @@
+  //折叠与展开
+    void on_btns_clicked()
+    {
+        //获取发射信号的组件的指针
+        QPushButton* button = qobject_cast<QPushButton*>(sender());
+        if (button)
+        {
+            int index = button->property("index").toInt();
+            for (auto i = 0; i < vec_widgets.size(); ++i)
+            {
+                //判断子widget的名字是不是和索引为index的按钮对应的QString存储的组名一样
+                if(vec_widgets[i]->objectName()== btns_to_widget_name_qstring[index])
+                    vec_widgets[i]->setVisible(!vec_widgets[i]->isVisible());
+            }
+            // btns[index]->setStyleSheet(
+            //     widgets[index]->isVisible() ? btnStyleOpened : btnStyleClosed);
+            this->adjustSize();//实现抽屉收拢时自动调整窗口大小
+           //this->update();
+        }
+    }
+    //一键隐藏三维模型按钮
+    void on_hide_btn_clicked()
+    {
+        //获取发射信号的组件的指针
+        QPushButton* button = qobject_cast<QPushButton*>(sender());
+        if (button)
+        {
+            int index = button->property("index").toInt();
+            //如果按钮是奇数次按下
+            if(group_sliders[index]->value() != 0)
+            {
+                //清除旧内容
+                child_sliders_old_value.clear();
+                //存储这组的各个滑动条原来的值
+                groupslider_old_value_ = group_sliders[index]->value();
+                for (auto i = 0; i < child_sliders.size(); ++i)
+                {
+                    if (child_sliders[i]->objectName() == btns_to_widget_name_qstring[index])
+                    {
+                        child_sliders_old_value.push_back(child_sliders[i]->value());
+                    }
+                }
+            }
+            //找到总滑动条并设置值为0，会连带该组所有滑动条值为0
+            group_sliders[index]->setValue(0);
+            for (auto i = 0; i < vec_widgets.size(); ++i)
+            {
+                //判断子widget的名字是不是和索引为index的按钮对应的QString存储的组名一样
+                if (vec_widgets[i]->objectName() == btns_to_widget_name_qstring[index])
+                {
+                    //禁用 QWidget 会使其显示为灰色，并且它的子组件（如滑动条）也会变为不可交互状态。
+                    vec_widgets[i]->setDisabled((vec_widgets[i]->isEnabled()));
+                }
+            }
+            for (auto i = 0; i < vec_main_widgets.size(); ++i)
+            {
+                if (vec_main_widgets[i]->objectName() == btns_to_widget_name_qstring[index])
+                {
+                    //禁用总滑动条所在的widget
+                    vec_main_widgets[i]->setDisabled((vec_main_widgets[i]->isEnabled()));
+                }
+            }
+            //第偶数次点击时
+            for (auto i = 0; i < vec_main_widgets.size(); ++i)
+            {
+                if (vec_main_widgets[i]->objectName() == btns_to_widget_name_qstring[index])
+                {
+                    if (vec_main_widgets[i]->isEnabled())
+                    {
+                        group_sliders[index]->setValue(groupslider_old_value_);
+                    }
+                }
+            }
+            int vec_index = 0;
+            for (auto i = 0; i < vec_widgets.size(); ++i)
+            {
+                if (vec_widgets[i]->objectName() == btns_to_widget_name_qstring[index])
+                {
+                    if (vec_widgets[i]->isEnabled())
+                    {
+                        if (child_sliders[i]->objectName() == btns_to_widget_name_qstring[index])
+                        {
+                            child_sliders[i]->setValue(child_sliders_old_value[vec_index++]);
+                        }                        
+                    }
+                }
+            }
+        }
+    }
