@@ -25,7 +25,7 @@
         QPushButton* button = qobject_cast<QPushButton*>(sender());
         if (button)
         {
-            int index = button->property("index").toInt();
+            int index = button->property("index").toInt(); 
             //如果按钮是奇数次按下
             if(group_sliders[index]->value() != 0)
             {
