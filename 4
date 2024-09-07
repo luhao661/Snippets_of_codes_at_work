@@ -1,0 +1,327 @@
+
+#pragma once
+
+
+#if 1
+#pragma once
+
+namespace core
+{
+    class ;
+    class ;
+    class ;
+};
+class Annulus
+{
+
+public:
+    Annulus(std::shared_ptr<core::IViewer>IV) :color_(core::Color4f::LightGreen),IV_(IV) {}
+    ~Annulus() {}
+    // 创建双圆环
+    void createAnnulus
+    (const Vec3& center = Vec3(0, 0, 0), const Vec3& direction = Vec3(0, 0, 1),
+        FloatPrecision innerRadius = 20.0, FloatPrecision outerRadius = 25.0,
+        FloatPrecision height = 20.0, FloatPrecision lengthOfLine = 40.0)
+    {
+        if (lengthOfLine > 2*innerRadius)
+        {
+            return;// 弦不能比内直径大
+        }
+
+        center_ = center;
+        innerRadius_ = innerRadius;
+        outerRadius_ = outerRadius;
+        height_ = height;
+        //单个圆环上以y轴为方向，且关于y轴(屏幕向内的方向)对称的两个点所连接而成的弦的长度
+        lengthOfLine_ = lengthOfLine;
+        p_myMesh_ = std::make_shared<Mesh>();
+        int segments = 60;
+        Vec3 up = direction;
+        Vec3 right = crossProduct(Vec3(1.0f, 0.0f, 0.0f), up).Normalize();
+        Vec3 forward = crossProduct(up, right).Normalize();
+        std::vector<Vec3> innerVertices1, innerVertices2;
+        std::vector<Vec3> outerVertices1, outerVertices2;
+        /*
+        center的值决定的是第一个圆环的中心点的位置，现在调整为
+        center的值决定的是两个圆环构成的整体模型的中心位置
+        */
+        // 计算两个圆环的中心位置
+        Vec3 firstCenter = center - Vec3(0, 0, height / 2);
+        Vec3 secondCenter = center + Vec3(0, 0, height / 2);
+
+        // 生成第一个圆环的顶点
+        for (int i = 0; i < segments; ++i)
+        {
+            float angle = i * 2.0f * M_PI / segments;
+            Vec3 offset = right * cos(angle) + forward * sin(angle);
+            innerVertices1.push_back(firstCenter + offset * innerRadius);
+            outerVertices1.push_back(firstCenter + offset * outerRadius);
+        }
+        // 生成第二个圆环的顶点
+        for (int i = 0; i < segments; ++i)
+        {
+            float angle = i * 2.0f * M_PI / segments;
+            Vec3 offset = right * cos(angle) + forward * sin(angle);
+            innerVertices2.push_back(secondCenter + offset * innerRadius);
+            outerVertices2.push_back(secondCenter + offset * outerRadius);
+        }
+        // 添加第一个圆环的顶点到网格
+        for (const auto& v : innerVertices1)
+            p_myMesh_->addVertex(v);
+        for (const auto& v : outerVertices1)
+            p_myMesh_->addVertex(v);
+        // 添加第二个圆环的顶点到网格
+        for (const auto& v : innerVertices2)
+            p_myMesh_->addVertex(v);
+        for (const auto& v : outerVertices2)
+            p_myMesh_->addVertex(v);
+        qDebug()<<"\n" << p_myMesh_->VertexNumber();//输出240
+        /*
+        注：
+        由调试可知，第二个圆环在第一个圆环的上面，两者距离为height        
+        */
+        // 添加面片：第一个圆环
+        for (int i = 0; i < segments; ++i)
+        {
+            int next = (i + 1) % segments;
+            p_myMesh_->addFace(i, next, i + segments);
+            p_myMesh_->addFace(next, next + segments, i + segments);
+        }
+        // 添加面片：第二个圆环
+        for (int i = 0; i < segments; ++i)
+        {
+            int next = (i + 1) % segments;
+            p_myMesh_->addFace(i + 2 * segments, next + 2 * segments, i + 3 * segments);
+            p_myMesh_->addFace(next + 2 * segments, next + 3 * segments, i + 3 * segments);
+        }
+        //***注***
+        //以下写法错误
+        // 计算第一个圆环的弦的两个端点
+        //Vec3 chordStart = firstCenter + Vec3(lengthOfLine / 2, 0, 0); // 弦的右端点
+        //Vec3 chordEnd = firstCenter + Vec3(-lengthOfLine / 2, 0, 0);    // 弦的左端点
+        // 计算第一个圆环的弦的两个端点
+        float halfChordLength = lengthOfLine / 2.0f;
+        float angleOffset = asin(halfChordLength / innerRadius);
+        Vec3 chordStart = firstCenter + right * (innerRadius * cos(angleOffset)) + forward * (innerRadius * fabs(sin(angleOffset))); // 弦的右端点
+        Vec3 chordEnd = firstCenter + right * (innerRadius * cos(angleOffset)) - forward * (innerRadius * fabs(sin(angleOffset))); // 弦的左端点          
+        //***注***
+        // 后续处理：确保 y 轴值为正数
+        chordStart.Y() = fabs(chordStart.Y());
+        chordEnd.Y() = fabs(chordEnd.Y());
+        int chordStartIndex = -1;
+        int chordEndIndex = -1;
+        /*
+        ***注***遍历的点是从最靠近屏幕外侧的点开始遍历，是沿着逆时针向里进行遍历
+        所以弦在圆中的位置的点，最先确定的应该是弦的右端点，然后才是弦的左端点
+        */
+        for (int i = 0; i < segments; ++i)
+        {
+            float angle = i * 2.0f * M_PI / segments;
+            Vec3 offset = right * cos(angle) + forward * sin(angle);
+            Vec3 vertex = firstCenter + offset * innerRadius;
+            qDebug() <<"\n" << (vertex - chordStart).Length();
+            if ((vertex - chordStart).Length() < 1.0f)
+            {
+                chordStartIndex = i;
+            }
+            if ((vertex - chordEnd).Length() < 1.0f)
+            {
+                chordEndIndex = i;
+            }
+        }
+        /*
+        注：
+        TVertex是顶点，VertexPointer是顶点指针
+        */
+        core::DebugView DV(IV_.get());
+        DV.drawLine(p_myMesh_->getPoint(chordStartIndex),
+            p_myMesh_->getPoint(chordEndIndex));
+        if (chordStartIndex != -1 && chordEndIndex != -1)
+        {
+            // 直接使用内圆上找到的顶点索引来添加面片
+            //p_myMesh_->addFace(p_myMesh_->getVertex(chordStartIndex),
+            //    p_myMesh_->getVertex(chordEndIndex),
+            //    p_myMesh_->getVertex(chordStartIndex));
+            //p_myMesh_->addFace(p_myMesh_->getVertex(chordEndIndex),
+            //    p_myMesh_->getVertex(chordEndIndex),
+            //    p_myMesh_->getVertex(chordStartIndex));
+            //// 使用 while 循环遍历从 chordStartIndex 到 chordEndIndex 的顶点，
+            //// 添加面片来封闭弦与内圆的较短弧
+            //int currentIndex = chordStartIndex;
+            //while (currentIndex != chordEndIndex)
+            //{
+            //    int nextIndex = (currentIndex + 1) % segments;
+            //    p_myMesh_->addFace(p_myMesh_->getVertex(currentIndex),
+            //        p_myMesh_->getVertex(nextIndex),
+            //        p_myMesh_->getVertex(chordStartIndex)); // 弦的一端
+            //    currentIndex = nextIndex;
+            //}
+            //// 连接最后一个顶点与弦的另一端
+            //p_myMesh_->addFace(p_myMesh_->getVertex(currentIndex),
+            //    p_myMesh_->getVertex(chordEndIndex),
+            //    p_myMesh_->getVertex(chordStartIndex)); // 弦的另一端
+
+            // 使用 while 循环遍历从 chordStartIndex 到 chordEndIndex 的顶点，
+            // 添加面片来封闭弦与内圆的较短弧。
+            int currentIndex = chordStartIndex;
+            while (currentIndex != chordEndIndex)
+            {
+                // 计算下一个顶点索引
+                int nextIndex = (currentIndex + 1) % segments;
+                // 使用当前顶点、下一个顶点、弦的两个端点之一来生成面片
+                p_myMesh_->addFace(p_myMesh_->getVertex(currentIndex),
+                    p_myMesh_->getVertex(chordStartIndex),
+                    p_myMesh_->getVertex(nextIndex));
+                // 更新 currentIndex 为下一个顶点
+                currentIndex = nextIndex;
+            }
+            /*
+            逻辑：
+            从 chordStartIndex 开始，逐步遍历弧上的顶点，直到 chordEndIndex。
+            每次遍历时，形成一个三角形面片，顶点分别是当前顶点、弦的起点、下一个顶点。
+            */
+            // 最后一个面片，连接 chordEndIndex 与最后的弧上的顶点
+            p_myMesh_->addFace(p_myMesh_->getVertex(currentIndex),
+                p_myMesh_->getVertex(chordEndIndex),
+                p_myMesh_->getVertex(chordStartIndex));
+        }
+
+        //*****************************在第二个圆环上画********************************
+        //***错误写法：***
+        // 计算第二个圆环的弦的两个端点
+        //chordStart = secondCenter + Vec3(lengthOfLine / 2, 0, 0); // 弦的右端点
+        //chordEnd = secondCenter + Vec3(-lengthOfLine / 2, 0, 0);    // 弦的左端点
+
+        // 计算第二个圆环的弦的两个端点
+        halfChordLength = lengthOfLine / 2.0f;
+        angleOffset = asin(halfChordLength / innerRadius);
+        chordStart = secondCenter + right * (innerRadius * cos(angleOffset)) + forward * (innerRadius * fabs(sin(angleOffset))); // 弦的右端点
+        chordEnd = secondCenter + right * (innerRadius * cos(angleOffset)) - forward * (innerRadius * fabs(sin(angleOffset))); // 弦的左端点          
+        //***注***
+        // 后续处理：确保 y 轴值为正数
+        chordStart.Y() = fabs(chordStart.Y());
+        chordEnd.Y() = fabs(chordEnd.Y());
+
+
+        // 找到第二个圆环的内圆上与弦端点对应的两个相邻顶点
+        chordStartIndex = -1;
+        chordEndIndex = -1;
+        /*
+        ***注***遍历的点是从最靠近屏幕外侧的点开始遍历，是沿着逆时针向里进行遍历
+        所以弦在圆中的位置的点，最先确定的应该是弦的右端点，然后才是弦的左端点
+        */
+        //以下代码得到的点的索引值仍和第一个圆环上的情况一样，这不对。
+        //for (int i = 0; i < segments; ++i)
+        //{
+        //    float angle = i * 2.0f * M_PI / segments;
+        //    Vec3 offset = right * cos(angle) + forward * sin(angle);
+        //    Vec3 vertex = secondCenter + offset * innerRadius;
+        //    qDebug() << "\n" << (vertex - chordStart).Length();
+        //    if ((vertex - chordStart).Length() < 0.01f)
+        //    {
+        //        chordStartIndex = i;
+        //    }
+        //    if ((vertex - chordEnd).Length() < 0.01f)
+        //    {
+        //        chordEndIndex = i;
+        //    }
+        //}
+        for (int i = 0; i < segments; ++i)
+        {
+            float angle = i * 2.0f * M_PI / segments;
+            Vec3 offset = right * cos(angle) + forward * sin(angle);
+            Vec3 vertex = secondCenter + offset * innerRadius;
+            qDebug() << "\n" << (vertex - chordStart).Length();
+            if ((vertex - chordStart).Length() < 1.0f)
+            {
+                chordStartIndex = i + 120;  // 增加偏移量
+            }
+            if ((vertex - chordEnd).Length() < 1.0f)
+            {
+                chordEndIndex = i + 120;  // 增加偏移量
+            }
+        }
+
+
+        //***注***
+        //以下写法错误
+        //if (chordStartIndex != -1 && chordEndIndex != -1)
+        //{
+        //    // 使用 while 循环遍历从 chordStartIndex 到 chordEndIndex 的顶点，
+        //    // 添加面片来封闭弦与内圆的较短弧。
+        //    int currentIndex = chordStartIndex;
+        //    while (currentIndex != chordEndIndex)
+        //    {
+        //        // 计算下一个顶点索引
+        //        int nextIndex = (currentIndex + 1) % (segments+60);
+        //        // 使用当前顶点、下一个顶点、弦的两个端点之一来生成面片
+        //        p_myMesh_->addFace(p_myMesh_->getVertex(currentIndex),
+        //            p_myMesh_->getVertex(chordStartIndex),
+        //            p_myMesh_->getVertex(nextIndex));
+        //        // 更新 currentIndex 为下一个顶点
+        //        currentIndex = nextIndex;
+        //    }
+        //    /*
+        //    逻辑：
+        //    从 chordStartIndex 开始，逐步遍历弧上的顶点，直到 chordEndIndex。
+        //    每次遍历时，形成一个三角形面片，顶点分别是当前顶点、弦的起点、下一个顶点。
+        //    */
+        //    // 最后一个面片，连接 chordEndIndex 与最后的弧上的顶点
+        //    p_myMesh_->addFace(p_myMesh_->getVertex(currentIndex),
+        //        p_myMesh_->getVertex(chordEndIndex),
+        //        p_myMesh_->getVertex(chordStartIndex));
+        //}
+
+        if (chordStartIndex != -1 && chordEndIndex != -1)
+        {
+            int currentIndex = chordStartIndex - 120;  // 去掉偏移量，确保 currentIndex 从 0 到 segments 范围内循环
+            while (currentIndex != chordEndIndex - 120)  // 同样处理 chordEndIndex 的偏移量
+            {
+                // 计算下一个顶点索引
+                int nextIndex = (currentIndex + 1) % segments;
+                // 使用当前顶点、下一个顶点、弦的两个端点之一来生成面片
+                p_myMesh_->addFace(p_myMesh_->getVertex(currentIndex + 120),  // 加上偏移量
+                    p_myMesh_->getVertex(chordStartIndex),
+                    p_myMesh_->getVertex(nextIndex + 120));  // 加上偏移量
+                // 更新 currentIndex 为下一个顶点
+                currentIndex = nextIndex;
+            }
+        }
+        /*
+        在 currentIndex 和 nextIndex 计算时，我们假设这些变量是基于不加偏移量的 segments 范围
+        （即 0 到 59），因为这是在每个圆环的内部处理顶点的逻辑。在 addFace 时再加上偏移量，
+        以确保访问的是第二个圆环的正确顶点（120 到 179）。
+        同理，chordStartIndex 和 chordEndIndex 仍保持原有的偏移量（即 120 以上的值），
+        无需减去偏移量。        
+        */
+        p_myMesh_->setColor(color_);
+    }
+    // // 设置颜色
+    // bool changeColor(core::Color4f& clr)
+    // {
+    //     color_ = clr;
+    //     // 这里假设 Mesh 类有一个设置颜色的方法
+    //     p_myMesh_->setColor(color_);
+    //     return true;
+    // }
+    // // 调整内半径
+    // bool setInnerRadius(FloatPrecision innerRadius)
+    // {
+    //     innerRadius_ = innerRadius;
+    //     return true;
+    // }
+    // // 调整外半径
+    // bool setOuterRadius(FloatPrecision outerRadius)
+    // {
+    //     outerRadius_ = outerRadius;
+    //     return true;
+    // }
+    // // 调整中心位置
+    // bool changeCentralPosition(const Vec3& center)
+    // {
+    //     center_ = center;
+    //     return true;
+    // }
+
+};
+#endif
