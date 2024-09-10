@@ -1,0 +1,95 @@
+//一键锁定按钮
+void NavBarWidget::onHideBtnClicked()
+{
+    QPushButton* button = qobject_cast<QPushButton*>(sender());
+    if (button)
+    {
+        pImpl_->onHideBtnClicked(button);
+    }
+}
+void NavBarWidget::Impl::onHideBtnClicked(QPushButton* button)
+{
+    if (button)
+    {
+        std::vector<QString> sliderName_vec;
+        QString groupName;
+        std::vector<int> sliderValue_vec;
+        int index = button->property("index").toInt();
+        //如果按钮是奇数次按下
+        if (group_sliders_[index]->value() != 0)//***注***只有在总滑动条值不为0时，才存入旧数据
+        {
+            //清除旧内容
+            child_sliders_old_value_.clear();
+            //存储这组的各个滑动条原来的值
+            groupslider_old_value_ = group_sliders_[index]->value();
+            for (auto i = 0; i < child_sliders_.size(); ++i)
+            {
+                if (child_sliders_[i]->objectName() == btns_to_widget_name_qstring_[index])
+                {
+                    child_sliders_old_value_.push_back(child_sliders_[i]->value());
+                }
+            }
+        }
+        //找到总滑动条并设置值为0，会连带该组所有滑动条值为0
+        //group_sliders_[index]->setValue(0);
+        bool isLocked= false;
+        for (auto i = 0; i < vec_child_widgets_.size(); ++i)
+        {
+            //判断子widget的名字是不是和索引为index的按钮对应的QString存储的组名一样
+            if (vec_child_widgets_[i]->objectName() == btns_to_widget_name_qstring_[index])
+            {
+                //禁用 QWidget 会使其显示为灰色，并且它的子组件（如滑动条）也会变为不可交互状态。
+                vec_child_widgets_[i]->setDisabled((vec_child_widgets_[i]->isEnabled()));
+            }
+        }
+        for (auto i = 0; i < vec_main_widgets_.size(); ++i)
+        {
+            if (vec_main_widgets_[i]->objectName() == btns_to_widget_name_qstring_[index])
+            {
+                //禁用总滑动条所在的widget
+                vec_main_widgets_[i]->setDisabled((vec_main_widgets_[i]->isEnabled()));
+            }
+        }
+
+        for (auto i = 0; i < vec_main_widgets_.size(); ++i)
+        {
+            if (vec_main_widgets_[i]->objectName() == btns_to_widget_name_qstring_[index])
+            {
+                if (vec_main_widgets_[i]->isEnabled())//第偶数次点击时才能进入
+                {
+                    group_sliders_[index]->setValue(groupslider_old_value_);
+                }
+            }
+        }
+        int vec_index = 0;
+        if (group_sliders_[index]->value() != 0)//***注***只有在总滑动条值不为0时才进行旧数据拿回操作
+            for (auto i = 0; i < vec_child_widgets_.size(); ++i)
+            {
+                if (vec_child_widgets_[i]->objectName() == btns_to_widget_name_qstring_[index])
+                {
+                    if (vec_child_widgets_[i]->isEnabled())//第偶数次点击时才能进入
+                    {
+                        if (child_sliders_[i]->objectName() == btns_to_widget_name_qstring_[index])
+                        {
+                            child_sliders_[i]->setValue(child_sliders_old_value_[vec_index++]);
+                        }
+                    }
+                }
+            }
+        for (auto i = 0; i < child_sliders_.size(); ++i)
+        {
+            if (child_sliders_[i]->objectName() == btns_to_widget_name_qstring_[index])
+            {
+                sliderName_vec.push_back(child_sliders_[i]->property("childSliderStyle").toString());
+                groupName = child_sliders_[i]->objectName();
+                sliderValue_vec.push_back(child_sliders_[i]->value());
+                if (vec_child_widgets_[i]->isEnabled())
+                    isLocked = false;
+                else
+                    isLocked = true;
+            }
+        }
+         emit navWidget_->slidersInGroupHasLocked
+        (sliderName_vec, groupName, sliderValue_vec, isLocked);
+    }
+}
