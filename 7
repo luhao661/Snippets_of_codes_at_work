@@ -1,0 +1,40 @@
+
+void NavBarWidget::Impl::selectItemsToIncrementalShow(const std::vector<std::pair<QString, QString>>& select_vec)
+{
+    //错误：
+    //***注***
+    //不清空现有布局中的内容
+    //撤除addItemsReal()对相关容器的操作
+    //只更新userSelectItemsOrder
+    //为了解决当不是连续地添加组名时，同组中的滑动条显示效果也不连续的问题
+    //要重新添加组件
+    //清空现有布局中的内容
+    while (auto item = mainLayout_->takeAt(0))
+    {
+        if (QWidget* widget = item->widget())
+        {
+            widget->deleteLater(); // 删除小部件
+        }
+        delete item; // 删除小布局项
+    }
+    //撤除addItemsReal()对相关容器的操作
+    clearTheHistoryRemain();
+    //查找 userSelectItemsOrder 中与 select_vec 中相同的组名，
+    // 并在找到的索引后插入 select_vec 中的滑动条名字
+    for (const auto& pair : select_vec)
+    {
+        //错误写法：
+        //这样找到的是最先匹配到组名的元素位置
+        //auto it = std::find_if(userSelectItemsOrder.begin(), userSelectItemsOrder.end(),
+        //    [&pair](const std::pair<QString, QString>& item) {
+        //        return item.second == pair.second; // 匹配组名
+        //    });
+        // 使用 std::find_if 和反向迭代器查找【最后一个匹配的】组名对应的迭代器位置
+        auto rit = std::find_if(userSelectItemsOrder.rbegin(), userSelectItemsOrder.rend(),
+            [&pair](const std::pair<QString, QString>& item)
+            {
+                return item.second == pair.second; // 匹配组名
+            });
+        auto it = rit.base();//注意：rit.base() 实际上指向的是反向迭代器指向元素的下一个元素的位置。
+        it--;//这样正向迭代器指向与反向迭代器相同的元素
+...
