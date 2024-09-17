@@ -1,0 +1,29 @@
+
+    //每个总和子滑动条有事件过滤器，子滑动条上有点击事件时会进入此函数
+    bool eventFilter(QObject* obj, QEvent* event) override
+    {
+        if (event->type() == QEvent::MouseButtonPress)
+        {
+            QMouseEvent* mouseEvent = static_cast<QMouseEvent*>(event);
+            QSlider* slider = qobject_cast<QSlider*>(obj);
+            if (slider && !slider->isEnabled())
+            {
+                // 滑动条被禁用时，阻止所有鼠标点击事件
+                return true;
+            }
+            if (slider)
+            {
+                QPoint pos = mouseEvent->pos();
+                int sliderMin = slider->minimum();
+                int sliderMax = slider->maximum();
+                int newValue = sliderMin + ((pos.x() * (sliderMax - sliderMin)) / slider->width());
+                if (newValue <= sliderMax || newValue >= sliderMin)
+                {
+                    slider->setValue(newValue);
+                }
+                // 不返回 true，继续处理事件，确保滑块拖动功能
+                //return true;
+            }
+        }
+        return QWidget::eventFilter(obj, event);
+    }
