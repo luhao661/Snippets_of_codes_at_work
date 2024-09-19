@@ -1,0 +1,48 @@
+RenderFramework::RenderFramework()
+{
+    //初始化事件处理程序
+    initEventHandler();
+    auto viewerFormat = core::ViewerFormat::CreateFormat();
+    viewer_.reset( core::IViewer::CreateViewer( viewerFormat ) );
+    //viewer_->enableLookHandler( true );
+    viewer_->asViewer()->enableLookHandler(true);
+    this->setCentralWidget( viewer_->asWidget() );
+    qDebug() << "viewer_ address:" << viewer_.get();
+    //drawable_ = core::MeshIO::readMesh( "mesh.stl" );
+    //auto node = std::make_shared<core::Node>();
+    //node->addDrawable( drawable_ );
+    //viewer_->addChild( node );
+    //viewer_->resetTrackball();
+
+    //测试不同的模型
+    //p_myMesh_ = core::MeshIO::readMesh("UpperJawCutting.stl");
+    p_myMesh_ = core::MeshIO::readMesh("mesh3.stl");
+
+    //利用KdTree的数据结构来加速射线与三维网格之间的交点检测
+    //若没有这行代码，就无法进行求交判断
+    p_myMesh_->createKdTree();
+    auto node = std::make_shared<core::Node>();
+    node->addDrawable(p_myMesh_);
+    viewer_->addChild(node);
+    viewer_->resetTrackball();
+    //让模型翻转
+    // 旋转 180 度，绕 y 轴旋转
+    //float angleDeg = 180.0f;
+    //core::Vec3 axis(0.0f, 1.0f, 0.0f);  // y 轴
+    //p_myMesh_ = changeOrientation(angleDeg, axis);
+    //这样会导致IView拖动模型旋转时，由于模型没有位于原点，故拖动时是模型绕着原点进行旋转
+    //不能实现原地旋转
+    //对模型打点
+    //让模型上的点和IViewer的视角构成向量线段
+}
+
+
+/*
+三维的坐标轴
+    z
+    |   y
+    |  /
+    |/
+    -------> x
+
+*/
