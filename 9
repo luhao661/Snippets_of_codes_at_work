@@ -23,7 +23,7 @@ RenderFramework::RenderFramework()
     p_myMesh_->createKdTree();
     auto node = std::make_shared<core::Node>();
     node->addDrawable(p_myMesh_);
-    viewer_->addChild(node);
+    viewer_->addChild(node); 
     viewer_->resetTrackball();
     //让模型翻转
     // 旋转 180 度，绕 y 轴旋转
