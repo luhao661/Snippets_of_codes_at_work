@@ -19,7 +19,7 @@ RenderFramework::RenderFramework()
     p_myMesh_ = core::MeshIO::readMesh("mesh3.stl");
 
     //利用KdTree的数据结构来加速射线与三维网格之间的交点检测 
-    //若没有这行代码，就无法进行求交判断
+    //若没有这行代码，就无法进行求交判断 
     p_myMesh_->createKdTree();
     auto node = std::make_shared<core::Node>();
     node->addDrawable(p_myMesh_);
@@ -38,7 +38,7 @@ RenderFramework::RenderFramework()
 
 
 /*
-三维的坐标轴
+三维的坐标轴 
     z
     |   y
     |  /
