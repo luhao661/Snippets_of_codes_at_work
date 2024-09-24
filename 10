@@ -1,16 +1,16 @@
 
-    // 创建碰撞过滤器
-    core::ICollisionFilter collisionFilter(ICM_LINE);
-    collisionFilter.setCollisionLineMethod(CollisionLineMethod::CLM_SEGMENT_LIST);
-    window.rectangleMesh_.get()->createKdTree();
-    window.p_myMesh_.get()->createKdTree();
+// 创建碰撞过滤器
+core::ICollisionFilter collisionFilter(ICM_LINE);
+collisionFilter.setCollisionLineMethod(CollisionLineMethod::CLM_SEGMENT_LIST);
+window.rectangleMesh_.get()->createKdTree();
+window.p_myMesh_.get()->createKdTree();
 
-    // 设置矩阵
-    core::Matrix identityMatrix = core::Matrix::Identity();
-    collisionFilter.apply
-    (window.rectangleMesh_.get(), identityMatrix, window.p_myMesh_.get(), identityMatrix);
-    auto res = collisionFilter.getCollisionSegmentList();
-    auto Dra = collisionFilter.generateCollisionLine(res);
-    window.node_->addDrawable(Dra);
-    window.viewer_->addChild(window.node_);
-    Dra->setColor(Color4f::DarkRed);
+// 设置矩阵
+core::Matrix identityMatrix = core::Matrix::Identity();
+collisionFilter.apply
+(window.rectangleMesh_.get(), identityMatrix, window.p_myMesh_.get(), identityMatrix);
+auto res = collisionFilter.getCollisionSegmentList();
+auto Dra = collisionFilter.generateCollisionLine(res);
+window.node_->addDrawable(Dra);
+window.viewer_->addChild(window.node_);
+Dra->setColor(Color4f::DarkRed);
