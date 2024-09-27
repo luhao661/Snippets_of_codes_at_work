@@ -1,0 +1,12 @@
+class LingualSideJudge
+{
+	using Vec3 = core::Point3<float>;
+	using Mesh = core::Mesh;
+	using Color4f = core::Color4<float>;
+
+public:
+	LingualSideJudge(const std::vector<Vec3> & points, std::shared_ptr<IGLWindow> viewer)
+	{
+		viewer_ = viewer;
+		cloud_.reset(new pcl::PointCloud<pcl::PointXYZ>{});
+
