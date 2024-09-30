@@ -9,5 +9,5 @@ public:
 	{
 		viewer_ = viewer;
 		cloud_.reset(new pcl::PointCloud<pcl::PointXYZ>{});
-
+ 
  
