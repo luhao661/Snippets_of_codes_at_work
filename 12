@@ -11,3 +11,4 @@ public:
 		cloud_.reset(new pcl::PointCloud<pcl::PointXYZ>{});
  
  
+ 
