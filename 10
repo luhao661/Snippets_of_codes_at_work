@@ -12,6 +12,6 @@ collisionFilter.apply
 auto res = collisionFilter.getCollisionSegmentList();
 auto Dra = collisionFilter.generateCollisionLine(res);
 window.node_->addDrawable(Dra);
-window.viewer_->addChild(window.node_);
+window.viewer_->addChild(window.node_); 
 Dra->setColor(Color4f::DarkRed); 
 
