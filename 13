@@ -1,0 +1,30 @@
+
+class MyBoundingBox
+{
+    using Vec3 = core::Point3<float>;
+public:
+    Vec3 min;
+    Vec3 max;
+    MyBoundingBox()
+    {
+        reset();
+    }
+    void reset()
+    {
+        min = { (std::numeric_limits<float>::max()),
+            (std::numeric_limits<float>::max()),
+            (std::numeric_limits<float>::max()) };
+        max = { (std::numeric_limits<float>::lowest()),
+            (std::numeric_limits<float>::lowest()),
+            (std::numeric_limits<float>::lowest()) };
+    }
+    void update(const Vec3& point) 
+    {
+        min.X() = std::min(min.X(), point.X());
+        min.Y() = std::min(min.Y(), point.Y());
+        min.Z() = std::min(min.Z(), point.Z());
+        max.X() = std::max(max.X(), point.X());
+        max.Y() = std::max(max.Y(), point.Y());
+        max.Z() = std::max(max.Z(), point.Z());
+    }
+};
