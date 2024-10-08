@@ -1,0 +1,69 @@
+double calDistanceTolerance()
+    {
+        // 计算所有点对之间的距离
+        //std::vector<double> distances;
+        //for (size_t i = 0; i < points_backup_.size(); ++i) 
+        //{
+        //  for (size_t j = i + 1; j < points_backup_.size(); ++j) 
+        //  {
+        //      double distance = euclideanDistance(points_backup_[i], points_backup_[j]);
+        //      distances.push_back(distance);
+        //  }
+        //}
+        // 排序距离
+        //std::sort(distances.begin(), distances.end());
+        // 选择合适的距离容忍度（选择中位数距离的1.5倍）
+        //double cluster_tolerance = distances[distances.size() / 2] * 1.5;
+        //std::cout << "Cluster tolerance: " << cluster_tolerance << std::endl;
+        //以上方法无法解决如下问题：
+        //点云数据中存在多个簇，每个簇内部的点之间距离较小，而簇与簇之间的距离较大。
+        //解决方法：
+        //首先计算每个点与其最近的k个邻居（这里取10个邻居）之间的平均距离，
+        //将这些平均距离存储在一个向量中。  
+         //选择这些平均距离的X百分位数作为距离容忍度。
+          
+        auto points_backup_ = points_res_;
+        // 将points_backup_转换为PCL点云
+        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
+        for (const auto& point : points_backup_) 
+        {
+            pcl::PointXYZ pcl_point;
+            pcl_point.x = point.X();
+            pcl_point.y = point.Y();
+            pcl_point.z = point.Z();
+            cloud->push_back(pcl_point);
+        }
+        // 创建一个KdTree对象，用于点云的邻域搜索
+        pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
+        tree->setInputCloud(cloud);
+        // 计算每个点的最近邻距离
+        std::vector<double> neighbor_distances;
+        for (size_t i = 0; i < cloud->points.size(); ++i) 
+        {
+            std::vector<int> pointIdxNKNSearch(10);
+            std::vector<float> pointNKNSquaredDistance(10);
+            /*
+            指向给定的查询点
+            要搜索的邻居的数量
+            相邻点的结果索引
+            到相邻点的结果平方距离(必须调整为k先验!)
+            */
+            if (tree->nearestKSearch(cloud->points[i], 10, 
+                pointIdxNKNSearch, pointNKNSquaredDistance) > 0) 
+            {
+                double avg_distance = 0.0;
+                for (size_t j = 1; j < pointNKNSquaredDistance.size(); ++j) 
+                {
+                    avg_distance += std::sqrt(pointNKNSquaredDistance[j]);
+                }
+                avg_distance /= (pointNKNSquaredDistance.size() - 1);
+                neighbor_distances.push_back(avg_distance);
+            }
+        }
+        // 排序邻域距离
+        std::sort(neighbor_distances.begin(), neighbor_distances.end());
+        // 选择合适的距离容忍度（选择由小到大的邻域距离的前95%，加上0.1的宽裕度）
+        double cluster_tolerance = neighbor_distances[neighbor_distances.size() * 0.95]+0.3;
+        qDebug()<< "Cluster tolerance: " << cluster_tolerance;
+        return cluster_tolerance;
+    }
