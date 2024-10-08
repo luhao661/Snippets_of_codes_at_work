@@ -1,0 +1,54 @@
+    //主成分分析 PCA 用于找到点云簇的主方向，然后沿主轴方向生成一条曲线。
+    void fitTheShapeOfThePointCloudCluster()
+    {
+        core::DebugView DV(viewer_->asViewer());
+        int i = 0;
+        for (auto& cloud_cluster : cloud_cluster_vec_)
+        {
+            // 获取均值向量
+            //直接这样写不行
+            //Eigen::Vector4f mean = pca.getMean();
+            //因为当点云簇中的点数少于3个。
+            //会报错
+            //pcl::PCA::initCompute] number of points < 3
+            //主成分分析（PCA）需要至少三个点才能计算出均值和特征向量。
+            // 检查点云簇中的点数是否足够
+            if (cloud_cluster->points.size() < 3)
+            {
+                std::cout << "Point cloud cluster has fewer than 3 points, skipping PCA." << std::endl;
+                continue;  // 跳过点数不足的簇
+            }
+            // 创建 PCA 对象
+            pcl::PCA<pcl::PointXYZ> pca;
+            pca.setInputCloud(cloud_cluster);
+            // 获取均值向量
+            Eigen::Vector4f mean = pca.getMean();
+            Eigen::Vector3f mean_3d = mean.head<3>();  // 去掉第4个元素（齐次坐标）
+            // 获取特征向量和特征值
+            Eigen::Matrix3f eigen_vectors = pca.getEigenVectors();
+            Eigen::Vector3f eigen_values = pca.getEigenValues();
+            // 输出主方向和特征值
+            std::cout << "Point cloud cluster principal direction:\n";
+            std::cout << "Mean: " << mean_3d.transpose() << std::endl;
+            Vec3 Vec3mean = { mean_3d.x(),mean_3d.y(),mean_3d.z()};
+            DV.drawPoint(Vec3mean);
+            std::cout << "Eigen Vectors (principal axes):\n" << eigen_vectors << std::endl;
+            std::cout << "Eigen Values: " << eigen_values.transpose() << std::endl;
+            // 沿着第一主成分轴 (主轴) 生成一条表示形状的线
+            Eigen::Vector3f principal_axis = eigen_vectors.col(0);  // 第一个特征向量是主轴
+            float line_length = eigen_values(0);  // 使用主成分的特征值作为线的长度（可以调整）
+            // 计算线的起点和终点，假设线段长度为特征值长度的两倍，中心为点云簇的均值
+            Eigen::Vector3f start_point = mean_3d - line_length * principal_axis;
+            Eigen::Vector3f end_point = mean_3d + line_length * principal_axis;
+            
+            Vec3 start = { start_point.x(),start_point.y(),start_point.z() };
+            Vec3 end = { end_point.x(),end_point.y(),end_point.z() };
+            // 输出拟合的线的起点和终点
+            //qDebug() << 
+            DV.drawLine(start, end);
+            ++i;
+            //存储每个点云簇的中心点和主方向
+            centers_.push_back(mean_3d);
+            directions_.push_back(eigen_vectors.col(0));
+        }
+    }
