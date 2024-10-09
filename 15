@@ -17,7 +17,7 @@
             {
                 std::cout << "Point cloud cluster has fewer than 3 points, skipping PCA." << std::endl;
                 continue;  // 跳过点数不足的簇
-            }
+             
             // 创建 PCA 对象
             pcl::PCA<pcl::PointXYZ> pca;
             pca.setInputCloud(cloud_cluster);
