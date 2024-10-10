@@ -1,0 +1,46 @@
+    //对代表每个点云簇的大致方向的线段进行拟合得到一个拟合后的方向
+    void cloudClusterDirectionFitting()
+    {
+        if (directions_.empty()) 
+        {
+            std::cerr << "No directions to fit." << std::endl;
+            return ;
+        }
+        if (verticalRectangleMesh_ == nullptr)
+            return;
+        // 计算方向向量的均值
+        Eigen::Vector3f meanDirection = Eigen::Vector3f::Zero();
+        for (const auto& dir : directions_) 
+        {
+            meanDirection += dir;
+        }
+        meanDirection /= directions_.size();
+        // 中心化数据
+        Eigen::MatrixXf centeredDirections(directions_.size(), 3);
+        for (size_t i = 0; i < directions_.size(); ++i) 
+        {
+            centeredDirections.row(i) = directions_[i] - meanDirection;
+        }
+        // 计算协方差矩阵
+        Eigen::Matrix3f covarianceMatrix = centeredDirections.transpose() * centeredDirections;
+        // 特征值分解
+        Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> eigenSolver(covarianceMatrix);
+        Eigen::Vector3f principalDirection = eigenSolver.eigenvectors().col(2); // 最大特征值对应的特征向量
+        //处理长度为10
+        principalDirection = principalDirection.normalized() * 10;
+        Vec3 theLen = { principalDirection .x(),principalDirection .y(),principalDirection .z()};
+        //指定起点
+        auto startPoint= verticalRectangleMesh_->getMeshCenter();
+        // 计算终点
+        auto endPoint = startPoint + theLen;
+        core::DebugView DV(viewer_->asViewer());
+        DV.drawLine(startPoint, endPoint,Color4f::Blue);
+        //获得根据包围盒来创建的纵向矩形mesh的法向量
+        auto fa=verticalRectangleMesh_->getFace(0);
+        Vec3 VecNormal=fa->N();
+        VecNormal = VecNormal.normalized() * 10;
+        startPoint = verticalRectangleMesh_->getMeshCenter();
+        // 计算终点
+        endPoint = startPoint + VecNormal;
+        DV.drawLine(startPoint, endPoint, Color4f::Blue);
+    }
