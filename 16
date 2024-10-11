@@ -35,7 +35,7 @@
         auto endPoint = startPoint + theLen;
         core::DebugView DV(viewer_->asViewer());
         DV.drawLine(startPoint, endPoint,Color4f::Blue);
-        //获得根据包围盒来创建的纵向矩形mesh的法向量
+        //获得根据包围盒来创建的纵向矩形mesh的法向量 
         auto fa=verticalRectangleMesh_->getFace(0);
         Vec3 VecNormal=fa->N();
         VecNormal = VecNormal.normalized() * 10;
