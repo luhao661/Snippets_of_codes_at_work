@@ -30,7 +30,7 @@
         principalDirection = principalDirection.normalized() * 10;
         Vec3 theLen = { principalDirection .x(),principalDirection .y(),principalDirection .z()};
         //指定起点
-        auto startPoint=   verticalRectangleMesh_->getMeshCenter();
+        auto startPoint=verticalRectangleMesh_->getMeshCenter();
         // 计算终点
         auto endPoint = startPoint + theLen;
         core::DebugView DV(viewer_->asViewer());
