@@ -19,7 +19,7 @@
         Eigen::MatrixXf centeredDirections(directions_.size(), 3);
         for (size_t i = 0; i < directions_.size(); ++i) 
         {
-            centeredDirections.row(i) = directions_[i] - meanDirection;
+            centeredDirections.row(i) = directions_[i] - meanDirection; 
         }
         // 计算协方差矩阵
         Eigen::Matrix3f covarianceMatrix = centeredDirections.transpose() * centeredDirections;
