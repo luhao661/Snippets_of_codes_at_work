@@ -1,0 +1,126 @@
+ //创建多矢状面
+    void createMultiVerticalRectangleMesh(float eachDistance, int numbers)
+    {
+        std::vector<Vec3> selectedPoints;
+        selectedPoints.reserve(4);
+        if (TeethPrincipalOrientationPoints.empty())
+        {
+            //找到包围盒的八个顶点
+            std::vector<Vec3> featurePoints = findFeaturePoints();
+            //显示8个特征点
+            //DV.drawPoints(featurePoints, Color4f::Red);
+            //显示4个距离模型最近的特征点
+            closestPoints_ = findClosestPoints(featurePoints);
+            selectedPoints = closestPoints_;
+        }
+        else
+            selectedPoints = TeethPrincipalOrientationPoints;
+
+        //DV.drawPoints(selectedPoints, Color4f::Blue);
+        assert(selectedPoints.size() == 4 && "Error: Exactly four points are required to create a rectangle");
+        //首先将原始4个点进行排序
+        // 计算质心
+        Vec3 centroid(0, 0, 0);
+        for (const auto& point : selectedPoints)
+        {
+            centroid = centroid + point;
+        }
+        centroid = centroid / static_cast<float>(selectedPoints.size());
+
+        // 根据角度对顶点进行排序
+        //***注***要解决如果有两个点都在与z轴平行的线上，那么就无法进行排序
+        //std::sort(selectedPoints.begin(), selectedPoints.end(),
+        //  [&centroid](const Vec3& a, const Vec3& b)
+        //  {
+        //      float angleA = std::atan2(a.Y() - centroid.Y(), a.X() - centroid.X());
+        //      float angleB = std::atan2(b.Y() - centroid.Y(), b.X() - centroid.X());
+        //      return angleA < angleB;
+        //  });
+        // 计算叉积
+        auto crossProduct = [](const Vec3& a, const Vec3& b) 
+            {
+            return Vec3(a.Y() * b.Z() - a.Z() * b.Y(),
+                a.Z() * b.X() - a.X() * b.Z(),
+                a.X() * b.Y() - a.Y() * b.X());
+            };
+        // 计算法向量
+        auto computeNormal = [&crossProduct](const std::vector<Vec3>& points) 
+            {
+            Vec3 u = points[1] - points[0];
+            Vec3 v = points[2] - points[0];
+            return crossProduct(u, v);
+            };
+        // 计算法向量
+        Vec3 normal = computeNormal(selectedPoints);
+        //***注***
+        //四个点按照平面上的顺时针或逆时针方向进行排序
+        // 根据角度对顶点进行排序
+        std::sort(selectedPoints.begin(), selectedPoints.end(),
+            [&centroid, &normal, crossProduct](const Vec3& a, const Vec3& b) {
+                Vec3 vecA = a - centroid;
+                Vec3 vecB = b - centroid;
+                Vec3 cross = crossProduct(vecA, vecB);
+                // 判断叉积的方向，决定顺时针还是逆时针
+                float dot = cross.X() * normal.X() + cross.Y() * normal.Y() + cross.Z() * normal.Z();
+                /*
+                通过计算每对点与质心的向量的叉积，并与法向量点乘，可以确定点的顺序。
+                叉积的方向决定了点的排序顺序：如果叉积与法向量同向（点乘结果为正），
+                则按顺时针排序；否则，按逆时针排序。
+                */
+                return dot > 0;
+            });
+        //调试打印
+        std::vector<Color4f> colors
+        { Color4f::Red , Color4f{1.0f, 0.5f, 0.0f, 1.0f},Color4f::Yellow,Color4f::Green };
+        int tiaoshi = 0;
+        std::shared_ptr<core::Mesh> tmpMesh = std::make_shared<core::Mesh>();
+        // 添加四个顶点到网格
+        for (const auto& point : selectedPoints)
+        {
+            DV.drawPoint(point,colors[tiaoshi++]);
+            tmpMesh->addVertex(point);
+        }
+        // 添加面片（两个三角形）
+        tmpMesh->addFace(0, 1, 2);
+        tmpMesh->addFace(0, 2, 3);
+        //auto node = std::make_shared<core::Node>();
+        //node->addDrawable(tmpMesh);
+        //viewer_->addChild(node);
+        tmpMesh->dirtyMesh();//可以不画出但是这句不能没有，否则fa->N()得到的是0,0,0
+        //获得根据包围盒来创建的纵向矩形mesh的法向量
+        auto fa = tmpMesh->getFace(0);
+        Vec3 VecNormal = fa->N();
+        //长度向量
+        Vec3 VecLen = VecNormal.normalized() * eachDistance;
+        int increase_index = 0;
+        for (int i = 1; i <= numbers; ++i)
+        {
+            //存储新的四个点
+            std::array<Vec3,4>newFourPoints;
+            int index = 0;
+            for (auto&& point : selectedPoints)
+            {
+                Vec3 startPoint = point;
+                // 计算终点
+                Vec3 endPoint = startPoint + VecLen* increase_index;
+                DV.drawLine(startPoint,endPoint,Color4f::LightBlue);
+                newFourPoints[index++]= endPoint;
+            }
+            ++increase_index;
+            std::shared_ptr<core::Mesh> tmpMesh = std::make_shared<core::Mesh>();
+            // 添加四个顶点到网格
+            for (const auto& point : newFourPoints)
+            {
+                tmpMesh->addVertex(point);
+            }
+            // 添加面片（两个三角形）
+            tmpMesh->addFace(0, 1, 2);
+            tmpMesh->addFace(0, 2, 3);
+            auto node = std::make_shared<core::Node>();
+            node->addDrawable(tmpMesh);
+            viewer_->addChild(node);
+            tmpMesh->dirtyMesh();
+            tmpMesh->setColor(Color4f::DarkGray);
+            verticalRectangleMesh_vec_.push_back(tmpMesh);
+        }
+    }
