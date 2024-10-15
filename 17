@@ -121,6 +121,6 @@
             viewer_->addChild(node);
             tmpMesh->dirtyMesh();
             tmpMesh->setColor(Color4f::DarkGray);
-            verticalRectangleMesh_vec_.push_back(tmpMesh);
+            verticalRectangleMesh_vec_.push_back(tmpMesh); 
         } 
     }
