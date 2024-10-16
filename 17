@@ -120,7 +120,7 @@
             node->addDrawable(tmpMesh);
             viewer_->addChild(node);
             tmpMesh->dirtyMesh();
-            tmpMesh->setColor(Color4f::DarkGray);
+            tmpMesh->setColor(Color4f::DarkGray); 
             verticalRectangleMesh_vec_.push_back(tmpMesh); 
         } 
     }
