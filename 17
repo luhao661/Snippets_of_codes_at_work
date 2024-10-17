@@ -111,7 +111,7 @@
             // 添加四个顶点到网格
             for (const auto& point : newFourPoints)
             {
-                tmpMesh->addVertex(point);
+                tmpMesh->addVertex(point); 
             }
             // 添加面片（两个三角形）
             tmpMesh->addFace(0, 1, 2);
