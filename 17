@@ -15,7 +15,7 @@
         }
         else
             selectedPoints = TeethPrincipalOrientationPoints;
-
+ 
         //DV.drawPoints(selectedPoints, Color4f::Blue); 
         assert(selectedPoints.size() == 4 && "Error: Exactly four points are required to create a rectangle");
         //首先将原始4个点进行排序 
