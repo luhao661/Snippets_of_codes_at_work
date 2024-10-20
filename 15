@@ -12,7 +12,7 @@
             //会报错
             //pcl::PCA::initCompute] number of points < 3
             //主成分分析（PCA）需要至少三个点才能计算出均值和特征向量。
-            // 检查点云簇中的点数是否足够
+            // 检查点云簇中的点数是否足够 
             if (cloud_cluster->points.size() < 3)
             {
                 std::cout << "Point cloud cluster has fewer than 3 points, skipping PCA." << std::endl;
