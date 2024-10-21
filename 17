@@ -26,7 +26,7 @@
             centroid = centroid + point;
         }
         centroid = centroid / static_cast<float>(selectedPoints.size());
-
+ 
         // 根据角度对顶点进行排序
         //***注***要解决如果有两个点都在与z轴平行的线上，那么就无法进行排序
         //std::sort(selectedPoints.begin(), selectedPoints.end(),
