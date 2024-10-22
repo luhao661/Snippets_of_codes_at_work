@@ -19,7 +19,7 @@
 				y_max = std::max(y_max, point.y);
 			}
 
-			// 确定图像大小
+			// 确定图像大小 
 			int scale_factor = 6;
 			int img_res_x = static_cast<int>((x_max - x_min) * scale_factor);
 			int img_res_y = static_cast<int>((y_max - y_min) * scale_factor);
