@@ -1,0 +1,287 @@
+	//生成每个点云簇的凸包，生成最小外接矩形，并得到各矩形方向的拟合方向
+	void processPointCloudClusters(bool isShow)
+	{
+		assert(!(cloud_cluster_.empty()) && "Error: cloud_cluster_ is empty!");
+
+		//绘制每个点云簇的轮廓，无法得到简化后的点云簇轮廓
+#if 0
+		for (const auto& one_cloud_cluster : cloud_cluster_) {
+			// 获取极值
+			float x_min = std::numeric_limits<float>::max();
+			float x_max = std::numeric_limits<float>::lowest();
+			float y_min = std::numeric_limits<float>::max();
+			float y_max = std::numeric_limits<float>::lowest();
+
+			for (const auto& point : one_cloud_cluster->points) {
+				x_min = std::min(x_min, point.x);
+				x_max = std::max(x_max, point.x);
+				y_min = std::min(y_min, point.y);
+				y_max = std::max(y_max, point.y);
+			}
+
+			// 确定图像大小
+			int scale_factor = 6;
+			int img_res_x = static_cast<int>((x_max - x_min) * scale_factor);
+			int img_res_y = static_cast<int>((y_max - y_min) * scale_factor);
+			cv::Mat image = cv::Mat::zeros(img_res_y, img_res_x, CV_8UC1);
+
+			// 映射点到图像坐标
+			for (const auto& point : one_cloud_cluster->points) {
+				int x_img = static_cast<int>(((point.x - x_min) / (x_max - x_min)) * img_res_x);
+				int y_img = img_res_y - static_cast<int>(((point.y - y_min) / (y_max - y_min)) * img_res_y); // Y坐标反向
+				if (x_img >= 0 && x_img < img_res_x && y_img >= 0 && y_img < img_res_y) {
+					image.at<uchar>(y_img, x_img) = 255; // 白色点
+				}
+			}
+
+			// 查找轮廓
+			std::vector<std::vector<cv::Point>> contours;
+
+			//CHAIN_APPROX_NONE 会保留轮廓的所有点，因此得到的轮廓点数与原始轮廓点数相同
+			//CHAIN_APPROX_SIMPLE 对轮廓进行简化，只保留必要的点，以减少存储点的数量。这个方法通常会合并一些连续的直线段，从而减少轮廓的点数。
+			cv::findContours(image, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+
+			// 绘制轮廓
+			if (isShow) 
+			{
+				cv::drawContours(image, contours, -1, cv::Scalar(255), 1);
+				//每个点云簇画一张图
+				std::string window_name = "Contours for Cluster " + std::to_string(&one_cloud_cluster - &cloud_cluster_[0]); // 创建窗口名
+				cv::imshow(window_name, image);
+				//cv::waitKey(0); // 等待用户按键
+			}
+		}
+#endif
+
+		//生成每个点云簇的凸包
+#if 1
+		//存每个点云簇的凸包
+		std::vector<std::vector<std::pair<cv::Point2f, cv::Point2f>>> convexHull_vec;
+
+		for (const auto& one_cloud_cluster : cloud_cluster_) 
+		{
+			// 获取极值
+			float x_min = std::numeric_limits<float>::max();
+			float x_max = std::numeric_limits<float>::lowest();
+			float y_min = std::numeric_limits<float>::max();
+			float y_max = std::numeric_limits<float>::lowest();
+
+			// 计算极值
+			for (const auto& point : one_cloud_cluster->points) 
+			{
+				x_min = std::min(x_min, point.x);
+				x_max = std::max(x_max, point.x);
+				y_min = std::min(y_min, point.y);
+				y_max = std::max(y_max, point.y);
+			}
+
+			// 创建图像
+			int scale_factor = 6;
+			int img_res_x = static_cast<int>((x_max - x_min) * scale_factor);
+			int img_res_y = static_cast<int>((y_max - y_min) * scale_factor);
+			cv::Mat image = cv::Mat::zeros(img_res_y, img_res_x, CV_8UC3);
+
+			// 绘制点云簇的点
+			std::vector<cv::Point> points;
+			
+			for (const auto& point : one_cloud_cluster->points) 
+			{
+				int x_img = static_cast<int>(((point.x - x_min) / (x_max - x_min)) * img_res_x);
+				int y_img = img_res_y - static_cast<int>(((point.y - y_min) / (y_max - y_min)) * img_res_y);
+				if (x_img >= 0 && x_img < img_res_x && y_img >= 0 && y_img < img_res_y) 
+				{
+					cv::circle(image, cv::Point(x_img, y_img), 2, cv::Scalar(255, 255, 255), -1); // 绘制点
+				}
+
+				//存储图像上的点(就是原场景中的点经过映射逻辑处理后，绘制在图像上的这些点)
+				points.emplace_back(x_img, y_img);
+			}
+
+			// 计算凸包
+			std::vector<int> hull_indices;
+			cv::convexHull(points, hull_indices);
+
+			// 绘制凸包
+			for (size_t i = 0; i < hull_indices.size(); i++) 
+			{
+				cv::line(image, points[hull_indices[i]], points[hull_indices[(i + 1) % hull_indices.size()]], cv::Scalar(0, 255, 0), 2);
+			}
+
+			// 可视化
+			if (isShow) 
+			{
+				std::string window_name = "Point Cloud Cluster and Convex Hull " + std::to_string(&one_cloud_cluster - &cloud_cluster_[0]); // 创建窗口名
+				cv::imshow(window_name, image);
+			}
+
+			std::vector<std::pair<cv::Point2f, cv::Point2f>> tmp;
+
+			// 反映射凸包线段到原始场景
+			for (size_t i = 0; i < hull_indices.size(); i++) 
+			{
+				// 获取凸包的两个端点
+				auto start = points[hull_indices[i]];
+				auto end = points[hull_indices[(i + 1) % hull_indices.size()]];
+
+				// 反映射到原始坐标系
+				auto inverse_map = [&](int img_coord, float min_val, float range, int img_res) -> float {
+					return min_val + ((img_coord / static_cast<float>(img_res)) * range);
+					};
+
+				float start_x_real = inverse_map(start.x, x_min, x_max - x_min, img_res_x);
+				float start_y_real = inverse_map(img_res_y - start.y, y_min, y_max - y_min, img_res_y); // Y轴反向
+				float end_x_real = inverse_map(end.x, x_min, x_max - x_min, img_res_x);
+				float end_y_real = inverse_map(img_res_y - end.y, y_min, y_max - y_min, img_res_y); // Y轴反向
+
+				if(isShow)
+					DV.drawLine({ start_x_real, start_y_real, 0 }, { end_x_real, end_y_real, 0 });
+
+				tmp.push_back({ cv::Point2f{start_x_real,start_y_real}, cv::Point2f{end_x_real,end_y_real} });
+			}
+			convexHull_vec.push_back(tmp);
+		}
+#endif
+
+
+		cv::Point2f  total_direction = {};
+
+		//利用 convexHull_vec 可以获取每个点云簇的凸包信息，
+		// 然后通过拟合最小外接矩形来计算每个点云簇的长轴和短轴，从而推断出簇的主要方向。
+		for (const auto& convexHull : convexHull_vec)
+		{
+			std::vector<cv::Point2f> hull_points;
+
+			// 提取凸包上的所有点 (将pair的起始点和终点都加入)
+			for (const auto& segment : convexHull)
+			{
+				hull_points.push_back(segment.first);
+				hull_points.push_back(segment.second);
+			}
+
+			// 使用minAreaRect拟合最小外接矩形
+			// OpenCV 中的 imgproc（Image Processing） 模块中的方法
+			cv::RotatedRect minRect = cv::minAreaRect(hull_points);
+
+			// 获取矩形的长轴、短轴和旋转角度
+			cv::Point2f rect_points[4];
+			minRect.points(rect_points); // 获取矩形的四个顶点
+
+			float width = minRect.size.width;  // 长轴或短轴
+			float height = minRect.size.height; // 短轴或长轴
+
+			/*
+			rect_points 代表了最小外接矩形的四个顶点，但由于这些顶点的顺序依赖于 OpenCV 的
+			内部实现，不能保证它们总是以你期望的顺序（与长轴和短轴相关的顶点）排列。
+			因此不能保证得到的是长轴
+			*/
+#if 0
+			// 确保 width 是长轴，height 是短轴
+			bool isWidthMajor = true;
+			if (height > width) 
+			{
+				std::swap(width, height);
+				isWidthMajor = false;
+			}
+
+			// 确定长轴方向
+			cv::Point2f major_axis_dir;
+			if (isWidthMajor) 
+			{
+				major_axis_dir = rect_points[1] - rect_points[0];
+			}
+			else 
+			{
+				major_axis_dir = rect_points[2] - rect_points[1];
+			}
+#endif
+
+			// 确保 width 是长轴，height 是短轴
+			bool isWidthMajor = true;
+			if (height > width)
+			{
+				isWidthMajor = false;
+			}
+
+			// 直接使用 minRect.angle 来计算方向向量
+			float angle = minRect.angle; // 矩形的旋转角度
+			//***注***
+			// 角度范围是[-90°, 0°]
+			//后续direction_vector的计算中，可以理解成
+			/*
+			如果当 minRect.angle = -θ 时，矩形的长轴相对于 x 轴顺时针旋转了 θ 度后，
+			会与当前的最小外接矩形平行或者重合。通过将这个角度转换成方向向量，
+			矩形长轴的方向可以通过旋转后的 x 轴方向来确定。
+
+			如果矩形的长轴原本与 x 轴平行，顺时针旋转超过 90° 才能与最小外接矩形平行或重合，
+			那么 OpenCV 会自动处理为相应的 短轴 与 x 轴平行，
+			此时 minRect.angle 依然会落在 -90° 到 0° 之间。
+			 
+			可以想象成：
+			矩形按照 minRect.angle 进行顺时针旋转（因为角度是负的）。
+			但在计算方向向量时，它相当于是将整个 x 轴和 y 轴的坐标系逆时针旋转相同的角度，
+			直到它与矩形的长轴平行。这时，新 x' 轴的方向就是矩形长轴的朝向。
+			*/
+
+			cv::Point2f direction_vector;
+
+			if (isWidthMajor) 
+			{
+				// 如果 width 是长轴
+				direction_vector = cv::Point2f(std::cos(angle * CV_PI / 180.0f), std::sin(angle * CV_PI / 180.0f));
+			}
+			else 
+			{
+				// 如果 height 是长轴，调整方向
+				direction_vector = cv::Point2f(-std::sin(angle * CV_PI / 180.0f), std::cos(angle * CV_PI / 180.0f));
+			}
+
+			// 可以选择绘制矩形和方向
+			if (isShow)
+			{
+				// 绘制最小外接矩形
+				for (int j = 0; j < 4; j++)
+				{
+					DV.drawLine(
+						{ rect_points[j].x, rect_points[j].y, 0 },
+						{ rect_points[(j + 1) % 4].x, rect_points[(j + 1) % 4].y, 0 }, Color4f{ 1.0f, 0.5f, 0.0f, 1.0f }				
+					);
+				}
+
+				// 绘制主要方向向量
+				cv::Point2f center = minRect.center; // 矩形中心
+				cv::Point2f arrow_tip = center + 10 * direction_vector; // 长轴方向的箭头
+
+				DV.drawLine(
+					{ center.x, center.y, 0 },
+					{ arrow_tip.x, arrow_tip.y, 0 }, Color4f::Yellow
+				);
+
+				DV.drawPoint({ arrow_tip.x, arrow_tip.y, 0 }, Color4f::Yellow);
+			}
+
+			// 累加方向向量
+			total_direction += direction_vector;
+		}
+
+		// 归一化方向向量
+		float total_length = std::sqrt(total_direction.x * total_direction.x + total_direction.y * total_direction.y);
+		cv::Point2f average_direction = total_direction / total_length;
+
+		// 绘制以原点为起点的最终方向向量
+		if (isShow)
+		{
+			// 原点
+			cv::Point2f origin(0.0f, 0.0f);
+
+			// 设置一个合适的长度，例如 50 像素
+			cv::Point2f arrow_tip = origin + 50 * average_direction;
+
+			// 绘制最终的方向向量
+			DV.drawLine(
+				{ origin.x, origin.y, 0 },
+				{ arrow_tip.x, arrow_tip.y, 0 }, Color4f::Green
+			);
+
+			DV.drawPoint({ arrow_tip.x, arrow_tip.y, 0 }, Color4f::Green);
+		}
+	}
