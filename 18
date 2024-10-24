@@ -33,7 +33,7 @@
 					image.at<uchar>(y_img, x_img) = 255; // 白色点
 				}
 			}
-
+ 
 			// 查找轮廓
 			std::vector<std::vector<cv::Point>> contours;
 
